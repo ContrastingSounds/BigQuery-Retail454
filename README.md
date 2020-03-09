@@ -2,6 +2,8 @@
 
 ONLY retail454.get_date_ranges("compare_last_week_dates") IS IMPLEMENTED.
 
+From a LookML model, the only currently working method is to create the functions within your own project from the provided SQL script.
+
 # BigQuery Retail 4-5-4 Calendar functions
 
 BigQuery's table partitions enable vast quantities of retail transaction data to be queried quickly and cheaply. But, they do present a challenge: table partitions are based on calendar dates. (note: BQ also offers integer partitioning. This library is intended for use with a date partitioned table).

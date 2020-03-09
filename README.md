@@ -1,4 +1,6 @@
-# NOTE: THIS LIBRARY IS UNDER DEVELOPMENT. ONLY retail454.get_date_ranges("compare_last_week_dates") IS IMPLEMENTEDS
+# NOTE: THIS LIBRARY IS UNDER DEVELOPMENT. 
+
+ONLY retail454.get_date_ranges("compare_last_week_dates") IS IMPLEMENTEDS
 
 # BigQuery Retail 4-5-4 Calendar functions
 
@@ -13,3 +15,10 @@ This library of functions allows you to get a date array for the most common rep
     sql_always_where:
         ${table.partition_column} IN UNNEST(retail454.get_date_ranges("compare_last_week_dates")) ;;
 
+# Add them to your project
+
+### Accesssing the publicly shared functions
+- Add the jonwalls.retail454 dataset via the GCP Console
+
+### Creating the functions within your own project
+- In your own project, create a retail454 dataset, and tun the retail454_functions.sql script

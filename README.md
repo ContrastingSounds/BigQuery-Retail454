@@ -1,6 +1,6 @@
 # NOTE: THIS LIBRARY IS UNDER DEVELOPMENT. 
 
-ONLY retail454.get_date_ranges("compare_last_week_dates") IS IMPLEMENTEDS
+ONLY retail454.get_date_ranges("compare_last_week_dates") IS IMPLEMENTED.
 
 # BigQuery Retail 4-5-4 Calendar functions
 

@@ -10,6 +10,6 @@ This library of functions allows you to get a date array for the most common rep
 
 # USAGE (IN A LOOKER LookML MOdel)
 
-sql_always_where:
-${inventory.stock_raw} IN UNNEST(retail454.get_date_ranges("compare_last_week_dates")) ;;
+    sql_always_where:
+        ${inventory.stock_raw} IN UNNEST(retail454.get_date_ranges("compare_last_week_dates")) ;;
 

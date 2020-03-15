@@ -9,7 +9,9 @@ CREATE OR REPLACE FUNCTION retail454.year(input DATE) AS (
         WHEN input < DATE('2018-02-04') THEN 2017
         WHEN input < DATE('2019-02-03') THEN 2018
         WHEN input < DATE('2020-02-02') THEN 2019
-        ELSE 2020 
+        WHEN input < DATE('2021-01-31') THEN 2020
+        WHEN input < DATE('2022-01-30') THEN 2021
+        ELSE 2022
     END
 );
 
@@ -23,7 +25,9 @@ CREATE OR REPLACE FUNCTION retail454.year_start(input INT64) AS (
         WHEN input = 2018 THEN DATE('2018-02-04') 
         WHEN input = 2019 THEN DATE('2019-02-03') 
         WHEN input = 2020 THEN DATE('2020-02-02') 
-        ELSE DATE('2020-02-02')
+        WHEN input = 2021 THEN DATE('2021-01-31')
+        WHEN input = 2022 THEN DATE('2022-01-30') 
+        ELSE DATE('2022-01-30')
     END
 );
 
@@ -57,6 +61,8 @@ CREATE OR REPLACE FUNCTION retail454.week_end(year INT64, week INT64) AS (
 );
 
 
+-- GET MONTH VALUES
+
 CREATE OR REPLACE FUNCTION retail454.month_number(input DATE) AS (
     CASE -- 4-5-4 monthly schedule
         WHEN retail454.week_number(input) BETWEEN 1 AND 4 THEN 1    -- 4 weeks
@@ -78,8 +84,6 @@ CREATE OR REPLACE FUNCTION retail454.month_number(input DATE) AS (
     END
 );
 
-
--- GET MONTH VALUES
 
 CREATE OR REPLACE FUNCTION retail454.month_start(year INT64, month INT64) AS (
     DATE_ADD(
@@ -129,6 +133,8 @@ CREATE OR REPLACE FUNCTION retail454.month_end(year INT64, month INT64) AS (
     )
 );
 
+
+-- GET QUARTER VALUES
 
 CREATE OR REPLACE FUNCTION retail454.quarter_number(input DATE) AS (
     CASE
@@ -204,6 +210,25 @@ CREATE OR REPLACE FUNCTION retail454.last_week_last_year_dates() AS (
 );
 
 
+CREATE OR REPLACE FUNCTION retail454.this_month_dates() AS (
+    GENERATE_DATE_ARRAY(
+        retail454.month_start(retail454.year(CURRENT_DATE()), retail454.month_number(CURRENT_DATE())), 
+        retail454.month_end(retail454.year(CURRENT_DATE()), retail454.month_number(CURRENT_DATE()))
+    )
+);
+
+
+CREATE OR REPLACE FUNCTION retail454.this_ytd_dates() AS (
+    GENERATE_DATE_ARRAY(
+        retail454.year_start(retail454.year(CURRENT_DATE())),
+        DATE_ADD(
+          retail454.year_start(retail454.year(CURRENT_DATE())), 
+          INTERVAL retail454.day_of_year(CURRENT_DATE()) - 1 DAY
+        )
+    )
+);
+
+
 CREATE OR REPLACE FUNCTION retail454.last_month_dates() AS (
     CASE 
         WHEN retail454.month_number(CURRENT_DATE()) > 1
@@ -266,6 +291,20 @@ CREATE OR REPLACE FUNCTION retail454.last_month_last_year_dates() AS (
 );
 
 
+-- GET COMBINED DATA RANGES FOR COMPARISONS
+
+CREATE OR REPLACE FUNCTION retail454.compare_yesterday_dates() AS (
+    GENERATE_DATE_ARRAY(DATE_ADD(retail454.year_start(2013), INTERVAL retail454.day_of_year(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)) DAY), DATE_ADD(retail454.year_start(2013), INTERVAL retail454.day_of_year(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)) DAY))
+    || GENERATE_DATE_ARRAY(DATE_ADD(retail454.year_start(2014), INTERVAL retail454.day_of_year(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)) DAY), DATE_ADD(retail454.year_start(2014), INTERVAL retail454.day_of_year(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)) DAY))
+    || GENERATE_DATE_ARRAY(DATE_ADD(retail454.year_start(2015), INTERVAL retail454.day_of_year(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)) DAY), DATE_ADD(retail454.year_start(2015), INTERVAL retail454.day_of_year(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)) DAY))
+    || GENERATE_DATE_ARRAY(DATE_ADD(retail454.year_start(2016), INTERVAL retail454.day_of_year(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)) DAY), DATE_ADD(retail454.year_start(2016), INTERVAL retail454.day_of_year(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)) DAY))
+    || GENERATE_DATE_ARRAY(DATE_ADD(retail454.year_start(2017), INTERVAL retail454.day_of_year(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)) DAY), DATE_ADD(retail454.year_start(2017), INTERVAL retail454.day_of_year(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)) DAY))
+    || GENERATE_DATE_ARRAY(DATE_ADD(retail454.year_start(2018), INTERVAL retail454.day_of_year(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)) DAY), DATE_ADD(retail454.year_start(2018), INTERVAL retail454.day_of_year(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)) DAY))
+    || GENERATE_DATE_ARRAY(DATE_ADD(retail454.year_start(2019), INTERVAL retail454.day_of_year(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)) DAY), DATE_ADD(retail454.year_start(2019), INTERVAL retail454.day_of_year(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)) DAY))
+    || GENERATE_DATE_ARRAY(DATE_ADD(retail454.year_start(2020), INTERVAL retail454.day_of_year(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)) DAY), DATE_ADD(retail454.year_start(2020), INTERVAL retail454.day_of_year(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)) DAY))
+);
+
+
 CREATE OR REPLACE FUNCTION retail454.compare_last_week_dates() AS (
     retail454.last_week_dates()
     ||
@@ -273,9 +312,106 @@ CREATE OR REPLACE FUNCTION retail454.compare_last_week_dates() AS (
 );
 
 
-CREATE OR REPLACE FUNCTION retail454.get_date_ranges(func STRING) AS (
-    CASE func
-        WHEN "compare_last_week_dates" THEN retail454.compare_last_week_dates()
-        ELSE retail454.compare_last_week_dates()
-    END
+CREATE OR REPLACE FUNCTION retail454.compare_week_number_dates(week_num INT64) AS (
+    GENERATE_DATE_ARRAY(retail454.week_start(2013, week_num), retail454.week_end(2013, week_num))
+    || GENERATE_DATE_ARRAY(retail454.week_start(2014, week_num), retail454.week_end(2014, week_num))
+    || GENERATE_DATE_ARRAY(retail454.week_start(2015, week_num), retail454.week_end(2015, week_num))
+    || GENERATE_DATE_ARRAY(retail454.week_start(2016, week_num), retail454.week_end(2016, week_num))
+    || GENERATE_DATE_ARRAY(retail454.week_start(2017, week_num), retail454.week_end(2017, week_num))
+    || GENERATE_DATE_ARRAY(retail454.week_start(2018, week_num), retail454.week_end(2018, week_num))
+    || GENERATE_DATE_ARRAY(retail454.week_start(2019, week_num), retail454.week_end(2019, week_num))
+    || GENERATE_DATE_ARRAY(retail454.week_start(2020, week_num), retail454.week_end(2020, week_num))
+); 
+
+
+CREATE OR REPLACE FUNCTION retail454.compare_this_month_dates() AS (
+    GENERATE_DATE_ARRAY(retail454.month_start(2013, retail454.month_number(CURRENT_DATE())), retail454.month_end(2013, retail454.month_number(CURRENT_DATE())))
+    || GENERATE_DATE_ARRAY(retail454.month_start(2014, retail454.month_number(CURRENT_DATE())), retail454.month_end(2014, retail454.month_number(CURRENT_DATE())))
+    || GENERATE_DATE_ARRAY(retail454.month_start(2015, retail454.month_number(CURRENT_DATE())), retail454.month_end(2015, retail454.month_number(CURRENT_DATE())))
+    || GENERATE_DATE_ARRAY(retail454.month_start(2016, retail454.month_number(CURRENT_DATE())), retail454.month_end(2016, retail454.month_number(CURRENT_DATE())))
+    || GENERATE_DATE_ARRAY(retail454.month_start(2017, retail454.month_number(CURRENT_DATE())), retail454.month_end(2017, retail454.month_number(CURRENT_DATE())))
+    || GENERATE_DATE_ARRAY(retail454.month_start(2018, retail454.month_number(CURRENT_DATE())), retail454.month_end(2018, retail454.month_number(CURRENT_DATE())))
+    || GENERATE_DATE_ARRAY(retail454.month_start(2019, retail454.month_number(CURRENT_DATE())), retail454.month_end(2019, retail454.month_number(CURRENT_DATE())))
+    || GENERATE_DATE_ARRAY(retail454.month_start(2020, retail454.month_number(CURRENT_DATE())), retail454.month_end(2020, retail454.month_number(CURRENT_DATE())))
+);
+
+
+-- CREATE OR REPLACE FUNCTION retail454.compare_last_month_dates() AS (
+--     CASE 
+--         WHEN retail454.month_number(CURRENT_DATE()) > 1 THEN
+--           GENERATE_DATE_ARRAY(retail454.month_start(2013, retail454.month_number(CURRENT_DATE()) - 1), retail454.month_end(2013, retail454.month_number(CURRENT_DATE()) - 1))
+--           || GENERATE_DATE_ARRAY(retail454.month_start(2014, retail454.month_number(CURRENT_DATE()) - 1), retail454.month_end(2014, retail454.month_number(CURRENT_DATE()) - 1))
+--           || GENERATE_DATE_ARRAY(retail454.month_start(2015, retail454.month_number(CURRENT_DATE()) - 1), retail454.month_end(2015, retail454.month_number(CURRENT_DATE()) - 1))
+--           || GENERATE_DATE_ARRAY(retail454.month_start(2016, retail454.month_number(CURRENT_DATE()) - 1), retail454.month_end(2016, retail454.month_number(CURRENT_DATE()) - 1))
+--           || GENERATE_DATE_ARRAY(retail454.month_start(2017, retail454.month_number(CURRENT_DATE()) - 1), retail454.month_end(2017, retail454.month_number(CURRENT_DATE()) - 1))
+--           || GENERATE_DATE_ARRAY(retail454.month_start(2018, retail454.month_number(CURRENT_DATE()) - 1), retail454.month_end(2018, retail454.month_number(CURRENT_DATE()) - 1))
+--           || GENERATE_DATE_ARRAY(retail454.month_start(2019, retail454.month_number(CURRENT_DATE()) - 1), retail454.month_end(2019, retail454.month_number(CURRENT_DATE()) - 1))
+--           || GENERATE_DATE_ARRAY(retail454.month_start(2020, retail454.month_number(CURRENT_DATE()) - 1), retail454.month_end(2020, retail454.month_number(CURRENT_DATE()) - 1))
+
+--         WHEN retail454.month_number(CURRENT_DATE()) = 1 THEN
+--           GENERATE_DATE_ARRAY(retail454.month_start(2013, 12), retail454.month_end(2013, 12))
+--           || GENERATE_DATE_ARRAY(retail454.month_start(2014, 12), retail454.month_end(2014, 12))
+--           || GENERATE_DATE_ARRAY(retail454.month_start(2015, 12), retail454.month_end(2015, 12))
+--           || GENERATE_DATE_ARRAY(retail454.month_start(2016, 12), retail454.month_end(2016, 12))
+--           || GENERATE_DATE_ARRAY(retail454.month_start(2017, 12), retail454.month_end(2017, 12))
+--           || GENERATE_DATE_ARRAY(retail454.month_start(2018, 12), retail454.month_end(2018, 12))
+--           || GENERATE_DATE_ARRAY(retail454.month_start(2019, 12), retail454.month_end(2019, 12))
+--           || GENERATE_DATE_ARRAY(retail454.month_start(2020, 12), retail454.month_end(2020, 12))
+--         ELSE NULL
+--     END
+-- );
+
+
+CREATE OR REPLACE FUNCTION retail454.compare_last_month_dates() AS (
+    retail454.last_month_dates()
+    ||
+    retail454.last_month_last_year_dates()
+);
+
+
+CREATE OR REPLACE FUNCTION retail454.compare_ytd_dates() AS (
+    GENERATE_DATE_ARRAY(retail454.year_start(2013), DATE_ADD(retail454.year_start(2013), INTERVAL retail454.day_of_year(CURRENT_DATE()) - 1 DAY))
+    || GENERATE_DATE_ARRAY(retail454.year_start(2014), DATE_ADD(retail454.year_start(2014), INTERVAL retail454.day_of_year(CURRENT_DATE()) - 1 DAY))
+    || GENERATE_DATE_ARRAY(retail454.year_start(2015), DATE_ADD(retail454.year_start(2015), INTERVAL retail454.day_of_year(CURRENT_DATE()) - 1 DAY))
+    || GENERATE_DATE_ARRAY(retail454.year_start(2016), DATE_ADD(retail454.year_start(2016), INTERVAL retail454.day_of_year(CURRENT_DATE()) - 1 DAY))
+    || GENERATE_DATE_ARRAY(retail454.year_start(2017), DATE_ADD(retail454.year_start(2017), INTERVAL retail454.day_of_year(CURRENT_DATE()) - 1 DAY))
+    || GENERATE_DATE_ARRAY(retail454.year_start(2018), DATE_ADD(retail454.year_start(2018), INTERVAL retail454.day_of_year(CURRENT_DATE()) - 1 DAY))
+    || GENERATE_DATE_ARRAY(retail454.year_start(2019), DATE_ADD(retail454.year_start(2019), INTERVAL retail454.day_of_year(CURRENT_DATE()) - 1 DAY))
+    || GENERATE_DATE_ARRAY(retail454.year_start(2020), DATE_ADD(retail454.year_start(2020), INTERVAL retail454.day_of_year(CURRENT_DATE()) - 1 DAY))
+    
+);
+
+
+CREATE OR REPLACE FUNCTION retail454.last_two_years_dates() AS (
+    GENERATE_DATE_ARRAY(
+        retail454.year_start(retail454.year(CURRENT_DATE()) - 1),
+        DATE_SUB(retail454.year_start(retail454.year(CURRENT_DATE()) + 1), INTERVAL 1 DAY)
+    )
+);
+
+
+-- SWITCHING FUNCTION TO RETURN DATE RANGES FOR PARTITION PRUNING
+
+-- CREATE OR REPLACE FUNCTION retail454.get_date_ranges(func STRING) AS (
+--     CASE func
+--         WHEN "yesterday" THEN GENERATE_DATE_ARRAY(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY), DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY))
+--         WHEN "last_week" THEN retail454.last_week_dates()
+--         WHEN "this_month" THEN retail454.this_month_dates()
+--         WHEN "this_year_to_date" THEN retail454.this_ytd_dates()
+--         WHEN "compare_yesterday" THEN retail454.compare_yesterday_dates()
+--         WHEN "compare_last_week" THEN retail454.compare_last_week_dates()
+--         WHEN "compare_last_month" THEN retail454.compare_last_month_dates()
+--         WHEN "compare_year_to_date" THEN retail454.compare_ytd_dates()
+--         WHEN "last_two_years" THEN retail454.last_two_years_dates()
+--         WHEN "all_time" THEN GENERATE_DATE_ARRAY(DATE(2013, 1, 1), DATE(2021, 12, 31))
+--         ELSE GENERATE_DATE_ARRAY(DATE(2013, 1, 1), DATE(2021, 12, 31))
+--     END
+-- );
+
+CREATE OR REPLACE FUNCTION retail454.yesterday_dates() AS (
+    GENERATE_DATE_ARRAY(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY), DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY))
+);
+
+CREATE OR REPLACE FUNCTION retail454.all_time_dates() AS (
+    GENERATE_DATE_ARRAY(DATE(2013, 1, 1), DATE(2021, 12, 31))
 );

@@ -40,14 +40,14 @@ CREATE OR REPLACE FUNCTION retail454.day_of_week(input DATE) AS (
 
 
 CREATE OR REPLACE FUNCTION retail454.day_of_year(input DATE) AS (
-    DATE_DIFF(input, retail454.year_start(retail454.year(input)), DAY)
+    DATE_DIFF(input, retail454.year_start(retail454.year(input)), DAY) + 1
 );
 
 
 -- GET WEEK VALUES
 
 CREATE OR REPLACE FUNCTION retail454.week_number(input DATE) AS (
-    CAST(retail454.day_of_year(input) / 7 AS INT64) + 1
+    DIV(retail454.day_of_year(input), 7) + 1
 );
 
 
@@ -149,7 +149,7 @@ CREATE OR REPLACE FUNCTION retail454.quarter_number(input DATE) AS (
 -- GET DATE RANGES
 
 CREATE OR REPLACE FUNCTION retail454.yesterday_dates() AS (
-    GENERATE_DATE_ARRAY(DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY), DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY))
+    [DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)]
 );
 
 
@@ -184,6 +184,19 @@ CREATE OR REPLACE FUNCTION retail454.last_week_dates() AS (
 );
 
 
+CREATE OR REPLACE FUNCTION retail454.last_week_end_dates() AS (
+    CASE 
+        WHEN retail454.week_number(CURRENT_DATE()) > 1
+          THEN [retail454.week_end(retail454.year(CURRENT_DATE()), retail454.week_number(CURRENT_DATE()) - 1)]
+        
+        WHEN retail454.week_number(CURRENT_DATE()) = 1
+          THEN [retail454.week_end(retail454.year(CURRENT_DATE()) - 1, 52)]
+        
+        ELSE NULL
+    END
+);
+
+
 CREATE OR REPLACE FUNCTION retail454.last_week_last_year_dates() AS (
     CASE 
         WHEN retail454.week_number(CURRENT_DATE()) > 1
@@ -209,6 +222,19 @@ CREATE OR REPLACE FUNCTION retail454.last_week_last_year_dates() AS (
                   52
                 )
                )
+        
+        ELSE NULL
+    END
+);
+
+
+CREATE OR REPLACE FUNCTION retail454.last_week_last_year_end_dates() AS (
+    CASE 
+        WHEN retail454.week_number(CURRENT_DATE()) > 1
+          THEN [retail454.week_end(retail454.year(CURRENT_DATE()) - 1, retail454.week_number(CURRENT_DATE()) - 1)]
+        
+        WHEN retail454.week_number(CURRENT_DATE()) = 1
+          THEN [retail454.week_end(retail454.year(CURRENT_DATE()) - 2, 52)]
         
         ELSE NULL
     END
@@ -317,6 +343,13 @@ CREATE OR REPLACE FUNCTION retail454.compare_last_week_dates() AS (
 );
 
 
+CREATE OR REPLACE FUNCTION retail454.compare_last_week_end_dates() AS (
+    retail454.last_week_end_dates()
+    ||
+    retail454.last_week_last_year_end_dates()
+);
+
+
 CREATE OR REPLACE FUNCTION retail454.compare_week_number_dates(week_num INT64) AS (
     GENERATE_DATE_ARRAY(retail454.week_start(2013, week_num), retail454.week_end(2013, week_num))
     || GENERATE_DATE_ARRAY(retail454.week_start(2014, week_num), retail454.week_end(2014, week_num))
@@ -326,6 +359,16 @@ CREATE OR REPLACE FUNCTION retail454.compare_week_number_dates(week_num INT64) A
     || GENERATE_DATE_ARRAY(retail454.week_start(2018, week_num), retail454.week_end(2018, week_num))
     || GENERATE_DATE_ARRAY(retail454.week_start(2019, week_num), retail454.week_end(2019, week_num))
     || GENERATE_DATE_ARRAY(retail454.week_start(2020, week_num), retail454.week_end(2020, week_num))
+); 
+
+
+CREATE OR REPLACE FUNCTION retail454.compare_week_number_end_dates(week_num INT64) AS (
+    [
+        retail454.week_end(2020, week_num), 
+        retail454.week_end(2019, week_num), 
+        retail454.week_end(2018, week_num), 
+        retail454.week_end(2017, week_num)
+    ]
 ); 
 
 
@@ -399,6 +442,14 @@ CREATE OR REPLACE FUNCTION retail454.all_time_dates() AS (
     GENERATE_DATE_ARRAY(DATE(2013, 1, 1), DATE(2021, 12, 31))
 );
 
+
+CREATE OR REPLACE FUNCTION retail454.all_week_end_dates() AS (
+    GENERATE_DATE_ARRAY(
+        retail454.week_end(2016, 1), 
+        retail454.week_end(2021, 52), 
+        INTERVAL 7 DAY
+    )
+);
 
 -- SWITCHING FUNCTION TO RETURN DATE RANGES FOR PARTITION PRUNING (REMOVED AS WAS HITTING QUERY DEPTH LIMIT)
 
